@@ -1,59 +1,70 @@
 /**
- * Store de autenticación con Zustand.
- * Soporta modo real (JWT + 2FA) y modo demo offline.
+ * Store de autenticación.
+ * Modo real: JWT + 2FA.
+ * Modo demo: login directo con perfil de entidad.
  */
 
 import { create } from 'zustand'
 import { apiClient } from '@/api/client'
-import type { User, AuthTokens, Asset } from '@/types'
+import type { User, AuthTokens, Asset, Vulnerability } from '@/types'
+import type { DemoEntityId } from '@/api/mockData'
 
 interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
   pendingUserId: string | null
+  activeEntityId: DemoEntityId | null
 
   setUser: (user: User) => void
   setPendingUserId: (userId: string) => void
   clearPending: () => void
 
-  // Modo real
   login: (email: string, password: string) => Promise<{ user_id: string }>
   verifyOtp: (userId: string, otp: string) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
 
-  // Modo demo
-  useDemoLogin: (profile: User, assets: Asset[]) => void
+  useDemoLogin: (
+    profile: User,
+    assets: Asset[],
+    vulns: Vulnerability[],
+    metrics: unknown,
+    entityId: DemoEntityId,
+  ) => void
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isAuthenticated: !!localStorage.getItem('access_token') || !!localStorage.getItem('demo_user'),
+  isAuthenticated:
+    !!localStorage.getItem('access_token') ||
+    !!localStorage.getItem('demo_user'),
   isLoading: false,
   pendingUserId: null,
+  activeEntityId: (localStorage.getItem('demo_entity') as DemoEntityId) ?? null,
 
   setUser: (user) => set({ user }),
   setPendingUserId: (userId) => set({ pendingUserId: userId }),
   clearPending: () => set({ pendingUserId: null }),
 
-  // ── Modo demo ─────────────────────────────────────────────────────────────
-  useDemoLogin: (profile, assets) => {
-    localStorage.setItem('demo_user', JSON.stringify(profile))
-    localStorage.setItem('demo_assets', JSON.stringify(assets))
-    // Token falso para que los interceptores no redirigian a /login
+  useDemoLogin: (profile, assets, vulns, metrics, entityId) => {
+    localStorage.setItem('demo_user',    JSON.stringify(profile))
+    localStorage.setItem('demo_assets',  JSON.stringify(assets))
+    localStorage.setItem('demo_vulns',   JSON.stringify(vulns))
+    localStorage.setItem('demo_metrics', JSON.stringify(metrics))
+    localStorage.setItem('demo_entity',  entityId)
     localStorage.setItem('access_token', 'demo-token')
-    set({ user: profile, isAuthenticated: true, pendingUserId: null })
+    // Resetear plan al básico al cambiar de entidad
+    localStorage.setItem('demo_plan', 'basic')
+    set({ user: profile, isAuthenticated: true, pendingUserId: null, activeEntityId: entityId })
   },
 
-  // ── Modo real ─────────────────────────────────────────────────────────────
   login: async (email, password) => {
     set({ isLoading: true })
     try {
-      const response = await apiClient.post('/auth/login', { email, password })
-      const { user_id } = response.data
-      set({ pendingUserId: user_id })
-      return { user_id }
+      const r = await apiClient.post('/auth/login', { email, password })
+      set({ pendingUserId: r.data.user_id })
+      return { user_id: r.data.user_id }
     } finally {
       set({ isLoading: false })
     }
@@ -62,16 +73,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   verifyOtp: async (userId, otp) => {
     set({ isLoading: true })
     try {
-      const response = await apiClient.post('/auth/verify-otp', {
-        user_id: userId,
-        otp_code: otp,
-      })
-      const tokens: AuthTokens = response.data
-      localStorage.setItem('access_token', tokens.access_token)
+      const r = await apiClient.post('/auth/verify-otp', { user_id: userId, otp_code: otp })
+      const tokens: AuthTokens = r.data
+      localStorage.setItem('access_token',  tokens.access_token)
       localStorage.setItem('refresh_token', tokens.refresh_token)
-
-      const meResponse = await apiClient.get('/auth/me')
-      set({ user: meResponse.data, isAuthenticated: true, pendingUserId: null })
+      const me = await apiClient.get('/auth/me')
+      set({ user: me.data, isAuthenticated: true, pendingUserId: null })
     } finally {
       set({ isLoading: false })
     }
@@ -80,39 +87,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     const refreshToken = localStorage.getItem('refresh_token')
     const isDemo = !!localStorage.getItem('demo_user')
-
     if (!isDemo && refreshToken) {
-      try {
-        await apiClient.post('/auth/logout', { refresh_token: refreshToken })
-      } catch {
-        // continúa logout aunque falle el servidor
-      }
+      try { await apiClient.post('/auth/logout', { refresh_token: refreshToken }) } catch { /* continúa */ }
     }
-
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('demo_user')
-    localStorage.removeItem('demo_assets')
-    set({ user: null, isAuthenticated: false, pendingUserId: null })
+    ;['access_token','refresh_token','demo_user','demo_assets','demo_vulns',
+      'demo_metrics','demo_entity','demo_plan'].forEach((k) => localStorage.removeItem(k))
+    set({ user: null, isAuthenticated: false, pendingUserId: null, activeEntityId: null })
   },
 
   refreshUser: async () => {
-    // Modo demo: cargar desde localStorage
-    const demoRaw = localStorage.getItem('demo_user')
-    if (demoRaw) {
+    const raw = localStorage.getItem('demo_user')
+    if (raw) {
       try {
-        const profile = JSON.parse(demoRaw) as User
-        set({ user: profile, isAuthenticated: true })
+        const profile = JSON.parse(raw) as User
+        const entityId = localStorage.getItem('demo_entity') as DemoEntityId | null
+        set({ user: profile, isAuthenticated: true, activeEntityId: entityId })
         return
-      } catch {
-        // si falla el parse, continúa
-      }
+      } catch { /* continúa */ }
     }
-
-    // Modo real
     try {
-      const response = await apiClient.get('/auth/me')
-      set({ user: response.data, isAuthenticated: true })
+      const r = await apiClient.get('/auth/me')
+      set({ user: r.data, isAuthenticated: true })
     } catch {
       set({ user: null, isAuthenticated: false })
     }

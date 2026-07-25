@@ -161,6 +161,13 @@ export interface Report {
 // --- Feature Flags ---
 
 export type FeatureName =
+  | 'scanning'
+  | 'dashboard'
+  | 'basic_reports'
+  | 'risk_assessment'
+  | 'iso27001_compliance'
+  | 'asset_management'
+  | 'monitoring'
   | 'ai_remediation'
   | 'xdr'
   | 'auto_remediation'
