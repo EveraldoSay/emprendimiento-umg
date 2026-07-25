@@ -1,0 +1,52 @@
+version: "3.9"
+
+# ==============================================================
+# Override de desarrollo (hot-reload, debug, puertos expuestos)
+# Usar con: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ==============================================================
+
+services:
+
+  api:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  worker:
+    command: celery -A app.core.celery_app worker --loglevel=debug --concurrency=2
+    volumes:
+      - ./backend:/app
+
+  beat:
+    command: celery -A app.core.celery_app beat --loglevel=debug
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  ollama:
+    ports:
+      - "11434:11434"
