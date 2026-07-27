@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem('demo_entity',  entityId)
     localStorage.setItem('access_token', 'demo-token')
     // Resetear plan al básico al cambiar de entidad
-    localStorage.setItem('demo_plan', 'basic')
+    localStorage.setItem('demo_plan', 'basic')   // siempre inicia en Básico
     set({ user: profile, isAuthenticated: true, pendingUserId: null, activeEntityId: entityId })
   },
 

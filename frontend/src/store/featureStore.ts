@@ -1,81 +1,105 @@
 /**
  * Store de Feature Flags y Planes.
- * Planes acumulativos: Básico ⊂ Profesional ⊂ Enterprise.
- * Persiste en localStorage para sobrevivir recargas en modo demo.
+ * Planes acumulativos según el documento del proyecto:
+ *
+ * Básico:       Escaneo de vulnerabilidades · Dashboard · Reportes mensuales
+ * Profesional:  + Evaluación de riesgos · ISO 27001 · Gestión de activos · Monitoreo
+ * Enterprise:   + IA Predictiva · SOC Virtual · SIEM · Gestión Incidentes · Respuesta auto
  */
 
 import { create } from 'zustand'
-import { apiClient } from '@/api/client'
-import type { FeatureFlags, FeatureName } from '@/types'
+import type { FeatureName } from '@/types'
 
 export type PlanTier = 'basic' | 'professional' | 'enterprise'
 
-// Qué incluye cada plan (acumulativo hacia arriba)
+// Features activas por plan (acumulativo)
 export const PLAN_FEATURES: Record<PlanTier, FeatureName[]> = {
   basic: [
-    'scanning',
-    'dashboard',
-    'basic_reports',
+    'scanning',      // Escaneo de vulnerabilidades
+    'dashboard',     // Dashboard
+    'basic_reports', // Reportes mensuales
   ],
   professional: [
     'scanning', 'dashboard', 'basic_reports',
-    'risk_assessment',
-    'iso27001_compliance',
-    'asset_management',
-    'monitoring',
+    'risk_assessment',     // Evaluación de riesgos
+    'iso27001_compliance', // Cumplimiento ISO 27001
+    'asset_management',    // Gestión de activos
+    'monitoring',          // Monitoreo
   ],
   enterprise: [
     'scanning', 'dashboard', 'basic_reports',
     'risk_assessment', 'iso27001_compliance', 'asset_management', 'monitoring',
-    'ai_remediation',
-    'xdr',
-    'auto_remediation',
-    'dedicated_infra',
+    'ai_remediation',    // IA Predictiva
+    'xdr',               // SOC Virtual
+    'auto_remediation',  // SIEM Integrado + Respuesta automatizada
+    'dedicated_infra',   // Gestión de Incidentes
     'advanced_compliance',
   ],
 }
 
-export const PLAN_LABELS: Record<PlanTier, { name: string; color: string; description: string }> = {
+export const PLAN_META: Record<PlanTier, {
+  name: string
+  shortName: string
+  color: string
+  badgeCls: string
+  dotCls: string
+  description: string
+  features: string[]
+}> = {
   basic: {
     name: 'Plan Básico',
+    shortName: 'Básico',
     color: 'gray',
-    description: 'Escaneo de vulnerabilidades · Dashboard · Reportes mensuales',
+    badgeCls: 'bg-gray-700/80 text-gray-300 border border-gray-600',
+    dotCls: 'bg-gray-400',
+    description: 'Funcionalidades esenciales de ciberseguridad',
+    features: ['Escaneo de vulnerabilidades', 'Dashboard interactivo', 'Reportes mensuales'],
   },
   professional: {
     name: 'Plan Profesional',
+    shortName: 'Profesional',
     color: 'blue',
-    description: 'Evaluación de riesgos · ISO 27001 · Gestión de activos · Monitoreo',
+    badgeCls: 'bg-blue-900/60 text-blue-300 border border-blue-600',
+    dotCls: 'bg-blue-400',
+    description: 'Gestión avanzada de riesgos y cumplimiento',
+    features: ['Evaluación de riesgos', 'Cumplimiento ISO 27001', 'Gestión de activos', 'Monitoreo continuo'],
   },
   enterprise: {
     name: 'Plan Enterprise',
+    shortName: 'Enterprise',
     color: 'purple',
-    description: 'IA Predictiva · SOC Virtual · SIEM Integrado · Respuesta automatizada',
+    badgeCls: 'bg-purple-900/60 text-purple-300 border border-purple-600',
+    dotCls: 'bg-purple-400',
+    description: 'Inteligencia artificial y respuesta automatizada',
+    features: ['IA Predictiva (Ollama)', 'SOC Virtual', 'SIEM Integrado', 'Gestión de Incidentes', 'Respuesta automatizada'],
   },
 }
 
+export type FeatureFlags = Record<FeatureName, boolean>
+
 function flagsForPlan(plan: PlanTier): FeatureFlags {
-  const active = PLAN_FEATURES[plan]
+  const active = new Set(PLAN_FEATURES[plan])
   return {
-    scanning:            active.includes('scanning'),
-    dashboard:           active.includes('dashboard'),
-    basic_reports:       active.includes('basic_reports'),
-    risk_assessment:     active.includes('risk_assessment'),
-    iso27001_compliance: active.includes('iso27001_compliance'),
-    asset_management:    active.includes('asset_management'),
-    monitoring:          active.includes('monitoring'),
-    ai_remediation:      active.includes('ai_remediation'),
-    xdr:                 active.includes('xdr'),
-    auto_remediation:    active.includes('auto_remediation'),
-    dedicated_infra:     active.includes('dedicated_infra'),
-    advanced_compliance: active.includes('advanced_compliance'),
+    scanning:            active.has('scanning'),
+    dashboard:           active.has('dashboard'),
+    basic_reports:       active.has('basic_reports'),
+    risk_assessment:     active.has('risk_assessment'),
+    iso27001_compliance: active.has('iso27001_compliance'),
+    asset_management:    active.has('asset_management'),
+    monitoring:          active.has('monitoring'),
+    ai_remediation:      active.has('ai_remediation'),
+    xdr:                 active.has('xdr'),
+    auto_remediation:    active.has('auto_remediation'),
+    dedicated_infra:     active.has('dedicated_infra'),
+    advanced_compliance: active.has('advanced_compliance'),
   }
 }
 
-const LS_PLAN_KEY = 'demo_plan'
+const LS_KEY = 'demo_plan'
 
-function getSavedPlan(): PlanTier {
-  const saved = localStorage.getItem(LS_PLAN_KEY)
-  if (saved === 'professional' || saved === 'enterprise') return saved
+function loadPlan(): PlanTier {
+  const v = localStorage.getItem(LS_KEY)
+  if (v === 'professional' || v === 'enterprise') return v
   return 'basic'
 }
 
@@ -89,24 +113,19 @@ interface FeatureState {
 }
 
 export const useFeatureStore = create<FeatureState>((set, get) => {
-  const savedPlan = getSavedPlan()
+  const initial = loadPlan()
   return {
-    flags: flagsForPlan(savedPlan),
-    activePlan: savedPlan,
+    flags: flagsForPlan(initial),
+    activePlan: initial,
     isLoaded: true,
 
-    fetchFlags: async (orgId: string) => {
-      try {
-        const response = await apiClient.get(`/admin/feature-flags/${orgId}`)
-        const serverFlags = response.data.flags as Record<string, boolean>
-        set({ flags: { ...flagsForPlan('basic'), ...serverFlags } as FeatureFlags, isLoaded: true })
-      } catch {
-        set({ isLoaded: true })
-      }
+    fetchFlags: async (_orgId: string) => {
+      // En modo demo siempre usamos el plan local
+      set({ isLoaded: true })
     },
 
     setPlan: (plan: PlanTier) => {
-      localStorage.setItem(LS_PLAN_KEY, plan)
+      localStorage.setItem(LS_KEY, plan)
       set({ activePlan: plan, flags: flagsForPlan(plan) })
     },
 
