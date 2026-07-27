@@ -18,17 +18,17 @@ export const PLAN_FEATURES: Record<PlanTier, FeatureName[]> = {
     'scanning',      // Escaneo de vulnerabilidades
     'dashboard',     // Dashboard
     'basic_reports', // Reportes mensuales
+    'asset_management', // Activos — visible desde básico
   ],
   professional: [
-    'scanning', 'dashboard', 'basic_reports',
+    'scanning', 'dashboard', 'basic_reports', 'asset_management',
     'risk_assessment',     // Evaluación de riesgos
     'iso27001_compliance', // Cumplimiento ISO 27001
-    'asset_management',    // Gestión de activos
     'monitoring',          // Monitoreo
   ],
   enterprise: [
-    'scanning', 'dashboard', 'basic_reports',
-    'risk_assessment', 'iso27001_compliance', 'asset_management', 'monitoring',
+    'scanning', 'dashboard', 'basic_reports', 'asset_management',
+    'risk_assessment', 'iso27001_compliance', 'monitoring',
     'ai_remediation',    // IA Predictiva
     'xdr',               // SOC Virtual
     'auto_remediation',  // SIEM Integrado + Respuesta automatizada

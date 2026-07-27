@@ -17,33 +17,32 @@ import { useFeatureStore, PLAN_META } from '@/store/featureStore'
 import { useAuthStore } from '@/store/authStore'
 import clsx from 'clsx'
 
-// Secciones del sidebar por plan
 const NAV_SECTIONS = [
   {
     label: 'Básico',
     items: [
-      { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard',               feature: 'dashboard'     },
-      { to: '/scans',      icon: Radio,           label: 'Escaneo Vulnerabilidades', feature: 'scanning'      },
-      { to: '/reports',    icon: FileText,        label: 'Reportes',                feature: 'basic_reports' },
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard',               feature: 'dashboard'      },
+      { to: '/scans',     icon: Radio,           label: 'Escaneo Vulnerabilidades', feature: 'scanning'       },
+      { to: '/assets',    icon: Server,          label: 'Inventario de Activos',    feature: 'asset_management' },
+      { to: '/reports',   icon: FileText,        label: 'Reportes',                feature: 'basic_reports'  },
     ],
   },
   {
     label: 'Profesional',
     items: [
-      { to: '/vulnerabilities', icon: AlertTriangle, label: 'Evaluación de Riesgos',   feature: 'risk_assessment'     },
-      { to: '/compliance',      icon: CheckCircle,   label: 'Cumplimiento ISO 27001',   feature: 'iso27001_compliance' },
-      { to: '/assets',          icon: Server,        label: 'Gestión de Activos',       feature: 'asset_management'    },
-      { to: '/monitoring',      icon: MonitorCheck,  label: 'Monitoreo',                feature: 'monitoring'          },
+      { to: '/vulnerabilities', icon: AlertTriangle, label: 'Evaluación de Riesgos', feature: 'risk_assessment'     },
+      { to: '/compliance',      icon: CheckCircle,   label: 'Cumplimiento ISO 27001', feature: 'iso27001_compliance' },
+      { to: '/monitoring',      icon: MonitorCheck,  label: 'Monitoreo',              feature: 'monitoring'          },
     ],
   },
   {
     label: 'Enterprise',
     items: [
-      { to: '/ai',       icon: Brain,    label: 'IA Predictiva',          feature: 'ai_remediation'  },
-      { to: '/xdr',      icon: Activity, label: 'SOC Virtual — XDR',      feature: 'xdr'             },
-      { to: '/siem',     icon: Database, label: 'SIEM Integrado',         feature: 'auto_remediation'},
-      { to: '/incidents',icon: Shield,   label: 'Gestión de Incidentes',  feature: 'dedicated_infra' },
-      { to: '/admin',    icon: Settings, label: 'Respuesta Automatizada', feature: 'dedicated_infra', roles: ['admin', 'superadmin'] },
+      { to: '/ai',        icon: Brain,    label: 'IA Predictiva',          feature: 'ai_remediation'   },
+      { to: '/xdr',       icon: Activity, label: 'SOC Virtual — XDR',      feature: 'xdr'              },
+      { to: '/siem',      icon: Database, label: 'SIEM Integrado',         feature: 'auto_remediation' },
+      { to: '/incidents', icon: Shield,   label: 'Gestión de Incidentes',  feature: 'dedicated_infra'  },
+      { to: '/admin',     icon: Settings, label: 'Respuesta Automatizada', feature: 'dedicated_infra', roles: ['admin', 'superadmin'] },
     ],
   },
 ]

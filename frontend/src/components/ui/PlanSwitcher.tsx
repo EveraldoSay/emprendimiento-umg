@@ -12,11 +12,11 @@ const PLAN_MODULES: Record<PlanTier, string[]> = {
     'Escaneo de vulnerabilidades',
     'Dashboard interactivo',
     'Reportes mensuales',
+    'Inventario de activos',
   ],
   professional: [
     'Evaluación de riesgos',
     'Cumplimiento ISO 27001',
-    'Gestión de activos',
     'Monitoreo continuo',
   ],
   enterprise: [
